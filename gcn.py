@@ -2,23 +2,65 @@
 # https://uvadlc-notebooks.readthedocs.io/en/latest/tutorial_notebooks/JAX/tutorial7/GNN_overview.html
 from flax import linen as nn
 import jax
+import jax.numpy as jnp
+
+
+edge_index = jnp.array([
+        [0, 1, 0, 2, 1],  # sources
+        [1, 0, 2, 0, 3]   # targets
+    ], dtype=int)
+
+feat_size = 100
+
+key = jax.random.PRNGKey(0)
+node_feats = jax.random.normal(key, (4, feat_size))
+
 
 class GCNLayer(nn.Module):
     c_out : int
 
-    @nn.compact
-    def __call__(self, node_feats, adj_matrix):
+    def __init__(self, 
+                 in_size: int, 
+                 hid_size: int):
+        self.hid_size = hid_size
+        self.nbr_w = jax.random.normal(key, (in_size,hid_size))
+        self.self_w = jax.random.normal(key, (in_size,hid_size))
+        self.b = jax.random.normal(key, (hid_size))
+
+    def __call__(self, node_feats, edge_index):
         """
         Inputs:
-            node_feats - Array with node features of shape [batch_size, num_nodes, c_in]
-            adj_matrix - Batch of adjacency matrices of the graph. If there is an edge from i to j, adj_matrix[b,i,j]=1 else 0.
-                         Supports directed edges by non-symmetric matrices. Assumes to already have added the identity connections.
-                         Shape: [batch_size, num_nodes, num_nodes]
+            node_feats - Array with node features of shape [num_nodes, c_in]
+            edge_index - Array with shape [2, num_edges] describing the edges of the graph.
+                         edge_index[0,i] = source node of edge i
+                         edge_index[1,i] = target node of edge i
         """
         # Num neighbours = number of incoming edges
-        num_neighbours = adj_matrix.sum(axis=-1, keepdims=True)
-        node_feats = nn.Dense(features=self.c_out, name='projection')(node_feats)
-        node_feats = jax.lax.batch_matmul(adj_matrix, node_feats)
-        node_feats = node_feats / num_neighbours
-        return node_feats
+        h = node_feats
+        src = edge_index[0]
+        dst = edge_index[1]
+        # msg = h.clone()
+        # out = jnp.zeros((h.shape[0], self.hid_size))
+        # for i in range(len(msg)):
+        #     nbr_msg = jnp.sum(h[dst[src == i]], axis=0)
+        #     nbr_msg = jnp.tanh( nbr_msg @ self.nbr_w + self.b) 
+        #     out.at[i].set(msg[i] @ self.self_w + nbr_msg) #tanh activation
+        # h = msg
+        # return h
+
+        msg = h
+        nbr_features = h[dst]
+        nbr_sum = jax.ops.segment_sum(nbr_features, src, num_segments=h.shape[0])
+        nbr_msg = jnp.tanh(nbr_sum @ self.nbr_w + self.b)
+        self_msg = msg @ self.self_w
+        out = self_msg + nbr_msg
+        return out
+ 
+in_size = feat_size
+
+gcn = GCNLayer(in_size=feat_size, hid_size=64)
+out_h = gcn(node_feats, edge_index)
+print (out_h[0])
+
+        
 
