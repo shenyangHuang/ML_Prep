@@ -16,17 +16,35 @@ class SparseMP(torch.nn.Module):
     def forward(self, x, edge_index):
         x_feat = self.x_linear(x)
         msg = self.msg_func(x_feat, edge_index)
+
+        """
+        #! with a for loop
         for i in range(x_feat.shape[0]):
-            #! we need to decide on a pooling function here
             if self.agg == "sum":
                 msg_set = torch.cat((x_feat[i].view(1,-1), msg[edge_index[0]==i]), dim=0)
                 x_feat[i] = torch.sum(msg_set, dim=0)
             else:
                 raise NotImplementedError
-        return x_feat
+        """
+        # Aggregate edge messages per node without a Python loop.
+        if self.agg == "sum":
+            # Matches the old loop semantics:
+            # x_out[i] = x_feat[i] + sum_{e: edge_index[0, e] == i} msg[e]
+            # https://docs.pytorch.org/docs/stable/generated/torch.zeros_like.html
+            # https://docs.pytorch.org/docs/stable/generated/torch.index_add_.html
+            agg_msg = torch.zeros_like(x_feat).index_add_(0, edge_index[0], msg)
+            return x_feat + agg_msg
+        raise NotImplementedError
     
     def msg_func(self, x_feat, edge_index):
-        input_feat = torch.cat((x_feat[edge_index[0]],x_feat[edge_index[1]]), 1)
+
+        #! implement degree normalization
+        node_ids, node_counts = torch.unique(edge_index[0], return_counts=True)
+        deg = torch.zeros(x_feat.shape[0], dtype=int)
+        deg[node_ids.int()] = node_counts + 1
+        deg_norm = deg.sqrt().view(-1,1)
+
+        input_feat = torch.cat((x_feat[edge_index[0]] * deg_norm[edge_index[0]], x_feat[edge_index[1]] * deg_norm[edge_index[1]]), 1)
         msg = self.msg_linear(input_feat) # (num_edge, hidden)
         return msg
 
@@ -42,7 +60,9 @@ def main():
 
     mp_layer = SparseMP(in_dim=node_feat_dim, hidden_dim=hidden_dim)
     x_hid = mp_layer(x, edge_index)
+    print (x.shape)
     assert x_hid.shape == (num_nodes, hidden_dim)
+    print ("x_hid.shape: ", x_hid.shape)
 
 
 if __name__ == "__main__":
