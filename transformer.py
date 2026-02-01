@@ -29,12 +29,6 @@ class Transformer(nn.Module):
         return out
 
 
-
-
-
-
-
-
 from torch_geometric.typing import EdgeType, NodeType
 from torch_geometric.nn import PositionalEncoding
 from typing import Any, Dict, List, Optional
