@@ -88,7 +88,9 @@ class MultiHeadAttention(nn.Module):
     """
     This block defines the MultiHeadAttention class. It splits the input into multiple attention heads, computes scaled dot-product attention, and then combines the outputs.
     """
-    def __init__(self, d_model, num_heads):
+    def __init__(self, 
+                 d_model:int, 
+                 num_heads:int):
         super(MultiHeadAttention, self).__init__()
         assert d_model % num_heads == 0, "d_model must be divisible by num_heads"
         # self.d_model = d_model
