@@ -1,16 +1,18 @@
 from credigraph import CrediGraphClient
 client = CrediGraphClient()
 print (client.query_domain("en.wikipedia.org"))
+print (client.query_domain("canada.ca"))
+
+
+# print (client.query_domain("www.nytimes.com"))
+print (client.query_domain("reuters.com"))
 
 
 
-# print(client.query_domain("org.wikipedia.en"))
-# print(client.query_domain("org.wikipedia.en"))
-# print (client.query_domain("net.nshah"))
-
-print (client.query_domain("en.wikipedia.org"))
 print (client.query_domain("nshah.net"))
-print (client.query_domain("www.nytimes.com"))
+
+# print (client.query_domain("en.wikipedia.org"))
+# print (client.query_domain("nshah.net"))
 
 
 
