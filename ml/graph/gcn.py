@@ -23,7 +23,6 @@ class GCNDense(nn.Module):
         return x
 
 
-
 class GCNSparse(nn.Module):
     def __init__(self, in_dim, hidden_dim):
         super().__init__()
@@ -31,30 +30,44 @@ class GCNSparse(nn.Module):
         self.hidden_dim = hidden_dim
         self.layer = nn.Linear(2*in_dim, hidden_dim)
         self.activation = nn.ReLU()
-    
+
     def forward(self, x, edge_index):
-        print ("hi")
-
         src, dst = edge_index[0], edge_index[1]
-
-        msg = self.msg_func(x, edge_index)
-        embed = torch.zeros(x.shape[0], msg.shape[1])
-        embed = embed.index_add(0, src, msg)
-        out = self.activation(embed)
-        return out
+        msg = self.msg_func()
 
 
 
-    def msg_func(self, x, edge_index):
-        src, dst = edge_index[0], edge_index[1]
-        node_idx, freq = torch.unique(src, return_counts=True)
-        deg = torch.zeros(x.shape[0]).long()
-        deg[node_idx.int()] = freq # adding self edge so there is no 0 degree node
-        deg = deg + 1
-        deg_norm = deg.sqrt().view(-1,1)
-        input_feat = torch.cat((x[edge_index[0]] * deg_norm[edge_index[0]], x[edge_index[1]] * deg_norm[edge_index[1]]), 1)
-        msg = self.layer(input_feat)
-        return msg
+
+
+# class GCNSparse(nn.Module):
+#     def __init__(self, in_dim, hidden_dim):
+#         super().__init__()
+#         self.in_dim = in_dim
+#         self.hidden_dim = hidden_dim
+#         self.layer = nn.Linear(2*in_dim, hidden_dim)
+#         self.activation = nn.ReLU()
+    
+#     def forward(self, x, edge_index):
+#         src, dst = edge_index[0], edge_index[1]
+
+#         msg = self.msg_func(x, edge_index)
+#         embed = torch.zeros(x.shape[0], msg.shape[1])
+#         embed = embed.index_add(0, src, msg)
+#         out = self.activation(embed)
+#         return out
+
+
+
+#     def msg_func(self, x, edge_index):
+#         src, dst = edge_index[0], edge_index[1]
+#         node_idx, freq = torch.unique(src, return_counts=True)
+#         deg = torch.zeros(x.shape[0]).long()
+#         deg[node_idx.int()] = freq # adding self edge so there is no 0 degree node
+#         deg = deg + 1
+#         deg_norm = deg.sqrt().view(-1,1)
+#         input_feat = torch.cat((x[edge_index[0]] * deg_norm[edge_index[0]], x[edge_index[1]] * deg_norm[edge_index[1]]), 1)
+#         msg = self.layer(input_feat)
+#         return msg
 
     
 

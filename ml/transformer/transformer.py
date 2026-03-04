@@ -1,3 +1,70 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import math
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self, d_model, num_heads):
+        super().__init__()
+        assert d_model % num_heads == 0, "d_model must be divisible by num_heads"
+
+        self.d_model = d_model
+        self.d_k = d_model // num_heads
+        self.w_Q = nn.Linear(d_model, d_model)
+        self.w_K = nn.Linear(d_model, d_model)
+        self.w_V = nn.Linear(d_model, d_model)
+
+        self.w_o = nn.Linear(d_model, d_model)
+
+        # (batch, seq_len, d_model) -> (batch, num_heads, seq_len, d_k)
+
+        # attn_scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
+
+        # attn_probs = F.softmax(attn_scores, dim=-1)
+
+        # output shape: (batch, num_heads, q_len, d_k)
+        # out = torch.matmul(attn_probs, v)
+
+        # (batch, num_heads, q_len, d_k) -> (batch, q_len, d_model)
+        # out = out.transpose(1, 2).view(batch_size, -1, self.d_model)
+
+
+        
+    def forward(self, q, k, v, mask=None):
+        batch_size = q.size(0)
+        
+        # 1. Linear projections and split into heads
+        # (batch, seq_len, d_model) -> (batch, num_heads, seq_len, d_k)
+        q = self.w_q(q).view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
+        k = self.w_k(k).view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
+        v = self.w_v(v).view(batch_size, -1, self.num_heads, self.d_k).transpose(1, 2)
+        
+        # 2. Scaled Dot-Product Attention
+        # scores shape: (batch, num_heads, q_len, k_len)
+        attn_scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
+        
+        if mask is not None:
+            attn_scores = attn_scores.masked_fill(mask == 0, -1e9)
+        
+        attn_probs = F.softmax(attn_scores, dim=-1)
+        
+        # 3. Multiply by values
+        # output shape: (batch, num_heads, q_len, d_k)
+        out = torch.matmul(attn_probs, v)
+        
+        # 4. Concatenate heads and final projection
+        # (batch, num_heads, q_len, d_k) -> (batch, q_len, d_model)
+        out = out.transpose(1, 2).contiguous().view(batch_size, -1, self.d_model)
+        
+        return self.w_o(out)
+
+
+
+
+
+
+
+
 """
 https://www.geeksforgeeks.org/deep-learning/transformer-using-pytorch/
 
