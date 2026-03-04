@@ -33,7 +33,18 @@ class GCNSparse(nn.Module):
 
     def forward(self, x, edge_index):
         src, dst = edge_index[0], edge_index[1]
-        msg = self.msg_func()
+        msg = self.msg_func(x, edge_index)
+        out = torch.zeros(x.shape[0], self.hidden_dim)
+        out.index_add(0,src,msg)
+        out = self.activation(out)
+
+    def msg_func(self, x, edge_index):
+        x = self.layer(x)
+        src, dst = edge_index[0], edge_index[1]
+        nodes, deg = torch.unique(src, return_count=True)
+        # there are nodes with no degree as well
+        msg = x[src] + x[dst]
+    
 
 
 
